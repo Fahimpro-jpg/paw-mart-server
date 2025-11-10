@@ -27,7 +27,7 @@ async function run() {
     const db = client.db('paw_db');
     const productsCollection = db.collection('products');
 
-    // 1️⃣ GET all products
+    // GET all products
     app.get('/products', async (req, res) => {
       try {
         const products = await productsCollection.find({}).toArray();
@@ -38,7 +38,26 @@ async function run() {
       }
     });
 
-    // 2️⃣ GET products by category
+    // get latest products
+
+    app.get("/products/latest", async (req, res) => {
+  try {
+    
+    const latestProducts = await productsCollection
+      .find({})
+      .sort({ _id: -1 }) 
+      .limit(6)
+      .toArray();
+
+    res.send(latestProducts); 
+  } catch (error) {
+    console.error("Error fetching latest products:", error);
+    res.status(500).send({ message: "Server error" });
+  }
+});
+
+
+// get products by category
     app.get('/products/category/:categoryName', async (req, res) => {
       const categoryName = req.params.categoryName;
       try {
