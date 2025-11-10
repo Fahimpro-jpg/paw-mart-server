@@ -30,8 +30,23 @@ async function run(){
         const db = client.db('paw_db')
         const productsCollection =db.collection('products')
 
-        app.post('/products')
+        app.get('/products', async (req, res) => {
+     try {
+         const products = await productsCollection.find({}).toArray();
+             res.send(products);
+       }
+          catch (err) {
+         console.error(err);
+         res.status(500).send({ error: "Failed to fetch products" });
+        }
+        });
 
+        app.post('/products',async(req,res)=>{
+            const newProduct = req.body;
+            const result = await productsCollection.insertOne(newProduct)
+            res.send(result)
+        })
+       
         await client.db("admin").command({ping: 1});
         console.log("Pinged your deployment. You successfully connected to MongoDB!");
         
