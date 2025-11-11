@@ -26,6 +26,34 @@ async function run() {
     await client.connect();
     const db = client.db('paw_db');
     const productsCollection = db.collection('products');
+    const usersCollection = db.collection('users');
+
+    // get users 
+   app.post('/users', async (req, res) => {
+  try {
+    const newUser = req.body;
+    const email = newUser.email;
+
+    if (!email) {
+      return res.status(400).send({ error: "Email is required" });
+    }
+
+    // Check if user already exists
+    const existingUser = await usersCollection.findOne({ email });
+    if (existingUser) {
+      return res.send({ message: 'User already exists. No need to insert again' });
+    }
+
+    // Insert new user
+    const result = await usersCollection.insertOne(newUser);
+    res.send(result);
+
+  } catch (error) {
+    console.error("Error in /users:", error);
+    res.status(500).send({ error: "Failed to save user", message: error.message });
+  }
+});
+
 
     // GET all products
     app.get('/products', async (req, res) => {
@@ -38,6 +66,15 @@ async function run() {
       }
     });
 
+    app.get('/users', async (req, res) => {
+  try {
+    const users = await usersCollection.find({}).toArray();
+    res.send(users);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send({ error: "Failed to fetch users" });
+  }
+});
     // get latest products
 
     app.get("/products/latest", async (req, res) => {
