@@ -164,6 +164,18 @@ app.delete('/products/:id', async (req, res) => {
   }
 }
 
+// POST new order
+app.post('/orders', async (req, res) => {
+  try {
+    const order = req.body;
+    const result = await ordersCollection.insertOne(order);
+    res.send(result);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send({ error: "Failed to save order" });
+  }
+});
+
 run().catch(console.dir);
 
 app.listen(port, () => {
