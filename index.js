@@ -55,16 +55,24 @@ async function run() {
 });
 
 
-    // GET all products
-    app.get('/products', async (req, res) => {
-      try {
-        const products = await productsCollection.find({}).toArray();
-        res.send(products);
-      } catch (err) {
-        console.error(err);
-        res.status(500).send({ error: "Failed to fetch products" });
-      }
-    });
+    
+    // ✅ GET products (with optional email filter)
+app.get('/products', async (req, res) => {
+  try {
+    const email = req.query.email; // check if email is sent as query
+    let query = {};
+    if (email) {
+      query = { email: email }; // only this user's listings
+    }
+
+    const products = await productsCollection.find(query).toArray();
+    res.send(products);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send({ error: "Failed to fetch products" });
+  }
+});
+
 
     app.get('/users', async (req, res) => {
   try {
@@ -118,6 +126,22 @@ async function run() {
         res.status(500).send({ error: "Failed to fetch product by ID" });
       }
     });
+
+    // ✅ DELETE product by ID
+app.delete('/products/:id', async (req, res) => {
+  const id = req.params.id;
+  try {
+    const result = await productsCollection.deleteOne({ _id: new ObjectId(id) });
+    if (result.deletedCount === 0) {
+      return res.status(404).send({ error: "Product not found" });
+    }
+    res.send({ message: "Product deleted successfully" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send({ error: "Failed to delete product" });
+  }
+});
+
 
     // 4️⃣ POST new product
     app.post('/products', async (req, res) => {
