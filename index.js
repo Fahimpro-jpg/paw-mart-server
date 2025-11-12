@@ -4,7 +4,6 @@ const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const app = express();
 const port = process.env.PORT || 3000;
 
-// Middleware
 app.use(cors());
 app.use(express.json());
 
@@ -27,154 +26,93 @@ async function run() {
     const db = client.db('paw_db');
     const productsCollection = db.collection('products');
     const usersCollection = db.collection('users');
+    const ordersCollection = db.collection('orders'); // ✅ Added this line
 
-    // get users 
-   app.post('/users', async (req, res) => {
-  try {
-    const newUser = req.body;
-    const email = newUser.email;
+    // ✅ USERS
+    app.post('/users', async (req, res) => {
+      const newUser = req.body;
+      const email = newUser.email;
+      if (!email) return res.status(400).send({ error: "Email is required" });
 
-    if (!email) {
-      return res.status(400).send({ error: "Email is required" });
-    }
+      const existingUser = await usersCollection.findOne({ email });
+      if (existingUser) return res.send({ message: 'User already exists' });
 
-    // Check if user already exists
-    const existingUser = await usersCollection.findOne({ email });
-    if (existingUser) {
-      return res.send({ message: 'User already exists. No need to insert again' });
-    }
-
-    // Insert new user
-    const result = await usersCollection.insertOne(newUser);
-    res.send(result);
-
-  } catch (error) {
-    console.error("Error in /users:", error);
-    res.status(500).send({ error: "Failed to save user", message: error.message });
-  }
-});
-
-
-    
-    // ✅ GET products (with optional email filter)
-app.get('/products', async (req, res) => {
-  try {
-    const email = req.query.email; // check if email is sent as query
-    let query = {};
-    if (email) {
-      query = { email: email }; // only this user's listings
-    }
-
-    const products = await productsCollection.find(query).toArray();
-    res.send(products);
-  } catch (err) {
-    console.error(err);
-    res.status(500).send({ error: "Failed to fetch products" });
-  }
-});
-
+      const result = await usersCollection.insertOne(newUser);
+      res.send(result);
+    });
 
     app.get('/users', async (req, res) => {
-  try {
-    const users = await usersCollection.find({}).toArray();
-    res.send(users);
-  } catch (err) {
-    console.error(err);
-    res.status(500).send({ error: "Failed to fetch users" });
-  }
-});
-    // get latest products
+      const users = await usersCollection.find({}).toArray();
+      res.send(users);
+    });
 
-    app.get("/products/latest", async (req, res) => {
-  try {
-    
-    const latestProducts = await productsCollection
-      .find({})
-      .sort({ _id: -1 }) 
-      .limit(6)
-      .toArray();
+    // ✅ PRODUCTS
+    app.get('/products', async (req, res) => {
+      const email = req.query.email;
+      const query = email ? { email } : {};
+      const products = await productsCollection.find(query).toArray();
+      res.send(products);
+    });
 
-    res.send(latestProducts); 
-  } catch (error) {
-    console.error("Error fetching latest products:", error);
-    res.status(500).send({ message: "Server error" });
-  }
-});
+    app.get('/products/latest', async (req, res) => {
+      const latest = await productsCollection.find({}).sort({ _id: -1 }).limit(6).toArray();
+      res.send(latest);
+    });
 
-
-// get products by category
     app.get('/products/category/:categoryName', async (req, res) => {
       const categoryName = req.params.categoryName;
-      try {
-        const products = await productsCollection.find({ category: categoryName }).toArray();
-        res.send(products);
-      } catch (err) {
-        console.error(err);
-        res.status(500).send({ error: "Failed to fetch products by category" });
-      }
+      const products = await productsCollection.find({ category: categoryName }).toArray();
+      res.send(products);
     });
 
-    // 3️⃣ GET product by ID
     app.get('/products/:id', async (req, res) => {
       const id = req.params.id;
-      try {
-        const product = await productsCollection.findOne({ _id: new ObjectId(id) });
-        if (!product) return res.status(404).send({ error: "Product not found" });
-        res.send(product);
-      } catch (err) {
-        console.error(err);
-        res.status(500).send({ error: "Failed to fetch product by ID" });
-      }
+      const product = await productsCollection.findOne({ _id: new ObjectId(id) });
+      if (!product) return res.status(404).send({ error: "Product not found" });
+      res.send(product);
     });
 
-    // ✅ DELETE product by ID
-app.delete('/products/:id', async (req, res) => {
-  const id = req.params.id;
-  try {
-    const result = await productsCollection.deleteOne({ _id: new ObjectId(id) });
-    if (result.deletedCount === 0) {
-      return res.status(404).send({ error: "Product not found" });
-    }
-    res.send({ message: "Product deleted successfully" });
-  } catch (err) {
-    console.error(err);
-    res.status(500).send({ error: "Failed to delete product" });
-  }
-});
-
-
-    // 4️⃣ POST new product
     app.post('/products', async (req, res) => {
-      const { name, image, category, location, description, email, date } = req.body;
-      if (!name || !image || !category) {
-        return res.status(400).send({ error: "Missing required fields: name, image, category" });
-      }
+      const product = req.body;
+      const result = await productsCollection.insertOne(product);
+      res.send(result);
+    });
+
+    app.delete('/products/:id', async (req, res) => {
+      const id = req.params.id;
+      const result = await productsCollection.deleteOne({ _id: new ObjectId(id) });
+      res.send(result);
+    });
+
+    // ✅ ORDERS (moved inside)
+    app.post('/orders', async (req, res) => {
       try {
-        const result = await productsCollection.insertOne({ name, image, category, location, description, email, date });
+        const order = req.body;
+        const result = await ordersCollection.insertOne(order);
         res.send(result);
       } catch (err) {
-        console.error(err);
-        res.status(500).send({ error: "Failed to add new product" });
+        console.error("Error saving order:", err);
+        res.status(500).send({ error: "Failed to save order" });
       }
     });
 
-    console.log("Connected to MongoDB successfully!");
+    app.get('/orders', async (req, res) => {
+      try {
+        const email = req.query.email;
+        const query = email ? { buyerEmail: email } : {};
+        const orders = await ordersCollection.find(query).toArray();
+        res.send(orders);
+      } catch (err) {
+        console.error("Error fetching orders:", err);
+        res.status(500).send({ error: "Failed to fetch orders" });
+      }
+    });
+
+    console.log("✅ Connected to MongoDB successfully!");
   } finally {
-    // You can close the client when needed
+    // You can close the client if needed
   }
 }
-
-// POST new order
-app.post('/orders', async (req, res) => {
-  try {
-    const order = req.body;
-    const result = await ordersCollection.insertOne(order);
-    res.send(result);
-  } catch (err) {
-    console.error(err);
-    res.status(500).send({ error: "Failed to save order" });
-  }
-});
 
 run().catch(console.dir);
 
