@@ -7,7 +7,7 @@ const port = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
-const uri = "mongodb+srv://pawmartdb:G9uts0zHmy4ZjnRg@cluster0.mufxfps.mongodb.net/?appName=Cluster0";
+const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.mufxfps.mongodb.net/?appName=Cluster0`;
 const client = new MongoClient(uri, {
   serverApi: {
     version: ServerApiVersion.v1,
@@ -26,9 +26,9 @@ async function run() {
     const db = client.db('paw_db');
     const productsCollection = db.collection('products');
     const usersCollection = db.collection('users');
-    const ordersCollection = db.collection('orders'); // ✅ Added this line
+    const ordersCollection = db.collection('orders');
 
-    // ✅ USERS
+    
     app.post('/users', async (req, res) => {
       const newUser = req.body;
       const email = newUser.email;
@@ -46,7 +46,7 @@ async function run() {
       res.send(users);
     });
 
-    // ✅ PRODUCTS
+    
     app.get('/products', async (req, res) => {
       const email = req.query.email;
       const query = email ? { email } : {};
