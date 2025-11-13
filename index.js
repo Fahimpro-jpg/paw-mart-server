@@ -22,7 +22,7 @@ app.get('/', (req, res) => {
 
 async function run() {
   try {
-    await client.connect();
+    // await client.connect();
     const db = client.db('paw_db');
     const productsCollection = db.collection('products');
     const usersCollection = db.collection('users');
@@ -84,7 +84,7 @@ async function run() {
       res.send(result);
     });
 
-    // ✅ ORDERS (moved inside)
+    //  ORDERS (moved inside)
     app.post('/orders', async (req, res) => {
       try {
         const order = req.body;
